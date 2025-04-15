@@ -1,0 +1,114 @@
+# Namespaces(7) from man
+
+A namespace wraps a global system resource in an abstraction that
+makes it appear to the processes within the namespace that they
+have their own isolated instance of the global resource. Changes
+to the global resource are visible to other processes that are
+members of the namespace, but are invisible to other processes.
+One use of namespaces is to implement containers.
+
+Namespace   Flag              Page                    Isolates
+───────────────────────────────────────────────────────────────────
+Cgroup      CLONE_NEWCGROUP   cgroup_namespaces(7)    Cgroup root
+                                                      directory
+IPC         CLONE_NEWIPC      ipc_namespaces(7)       System V
+                                                      IPC, POSIX
+                                                      message
+                                                      queues
+Network     CLONE_NEWNET      network_namespaces(7)   Network
+                                                      devices,
+                                                      stacks,
+                                                      ports, etc.
+Mount       CLONE_NEWNS       mount_namespaces(7)     Mount points
+PID         CLONE_NEWPID      pid_namespaces(7)       Process IDs
+Time        CLONE_NEWTIME     time_namespaces(7)      Boot and
+                                                      monotonic
+                                                      clocks
+User        CLONE_NEWUSER     user_namespaces(7)      User and
+                                                      group IDs
+UTS         CLONE_NEWUTS      uts_namespaces(7)       Hostname and
+                                                      NIS domain
+                                                      name
+
+The clone(2) system call creates a new process.  If the
+flags argument of the call specifies one or more of the
+CLONE_NEW* flags listed above, then new namespaces are
+created for each flag, and the child process is made a
+member of those namespaces. (This system call also
+implements a number of features unrelated to namespaces.)
+
+The setns(2) system call allows the calling process to join
+an existing namespace.  The namespace to join is specified
+via a file descriptor that refers to one of the
+/proc/pid/ns files described below.
+
+The unshare(2) system call moves the calling process to a
+new namespace.  If the flags argument of the call specifies
+one or more of the CLONE_NEW* flags listed above, then new
+namespaces are created for each flag, and the calling
+process is made a member of those namespaces. (This system call also
+implements a number of features unrelated to namespaces.)
+
+Various ioctl(2) operations can be used to discover
+information about namespaces.  These operations are
+described in ioctl_nsfs(2).
+
+Creation of new namespaces using clone(2) and unshare(2) in most
+cases requires the CAP_SYS_ADMIN capability, since, in the new
+namespace, the creator will have the power to change global
+resources that are visible to other processes that are
+subsequently created in, or join the namespace.  User namespaces
+are the exception: since Linux 3.8, no privilege is required to
+create a user namespace.
+
+...
+
+# Netlink(7) from docs
+
+https://www.infradead.org/~tgr/libnl/doc/core.html#core_netlink_fundamentals
+
+The netlink protocol is a socket based IPC mechanism used for
+communication between userspace processes and the kernel or between
+userspace processes themselves. The netlink protocol is based on
+BSD sockets and uses the AF_NETLINK address family. Every netlink
+protocol uses its own protocol number (e.g. NETLINK_ROUTE, 
+NETLINK_NETFILTER, etc). Its addressing schema is based on 
+a 32 bit port number, formerly referred to as PID, which uniquely
+identifies each peer.
+
+# Unshare
+
+term 1:
+unshare -U --kill-child /bin/bash
+
+term 2:
+ps -auxf | grep bash
+[root@ ~]# echo "0 500 1000" | tee /proc/50092/uid_map 
+0 500 1000
+[root@ ~]# echo "0 500 1000" | tee /proc/50092/gid_map 
+0 500 1000
+
+term 1:
+unshare --ipc --uts --kill-child /bin/bash
+hostname mycontainer
+unshare --net --kill-child /bin/bash
+
+term 2:
+[root@ ~]# ip link add veth0 type veth peer name ceth0
+[root@ ~]# ip link set veth0 up
+[root@ ~]# ip addr add 172.12.0.11/24 dev veth0
+[root@ ~]# ip link set ceth0 netns /proc/50942/ns/net
+
+term 1:
+root@mycontainer:~# ip link set lo up
+root@mycontainer:~# ip link set ceth0 up
+root@mycontainer:~# ip addr add 172.12.0.12/24 dev ceth0
+ping -c 1 172.16.0.11
+unshare --pid --mount --fork --kill-child /bin/sh
+mount --bind alpine alpine
+cd alpine
+mkdir hostfs_root
+/sbin/pivot_root . hostfs_root
+mount -t proc proc /proc
+umount -l hostfs_root
+mount
