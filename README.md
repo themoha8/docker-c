@@ -1,5 +1,5 @@
 # Description
-Learning namespaces and containers in linux.
+Learning namespaces, netlink protocol and containers in linux.
 
 # Build
-./make.sh
+./make.sh or ./make.sh [program_name]
