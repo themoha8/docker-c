@@ -20,7 +20,7 @@ enum { a_flag = 1 << 0, m_flag = 1 << 1, u_flag = 1 << 2,
 	U_flag = 1 << 6, c_flag = 1 << 7, T_flag = 1 << 8
 };
 
-enum { max_buf = 32, max_ns = 8 };
+enum { max_buf = 32, max_ns = 8, int_max = 2147483647 };
 
 struct cmdline_opts {
 	int target;
@@ -66,10 +66,11 @@ static void help()
 		 " -T           enter time namespace\n" " -h           display this help\n");
 }
 
-/* The pas_atoi converts from ASCII to int (only positive number). */
+/* The pos_atoi converts from ASCII to int (only positive number). */
 static int pos_atoi(const char *s)
 {
-	int i, n = 0;
+	int i;
+	unsigned long n = 0;
 
 	if (!s)
 		return -1;
@@ -78,12 +79,11 @@ static int pos_atoi(const char *s)
 		n = n * 10 + s[i] - '0';
 
 		/* overflow */
-		if (n < 0)
+		if (n > int_max)
 			return -1;
 	}
 
 	return n;
-
 }
 
 /* The init_cmdline_opts initializes struct cmline_opts. */
